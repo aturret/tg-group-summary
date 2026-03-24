@@ -1,0 +1,27 @@
+services:
+  tg-group-summary:
+    image: ghcr.io/aturret/tg-group-summary:latest
+    restart: unless-stopped
+    environment:
+      # --- Telegram ---
+      TELEGRAM_BOT_TOKEN: ""
+      SUMMARY_CHAT_ID: ""
+      SUMMARY_CHAT_NAME: ""
+      TARGET_CHAT_ID: ""
+
+      # --- AI providers ---
+      GOOGLE_API_KEY: ""
+      OPENAI_API_KEY: ""
+      OPENAI_GPT_MODEL: "gpt-5"       # optional, defaults to gpt-5
+
+      # --- AWS ---
+      AWS_ACCESS_KEY_ID: ""
+      AWS_SECRET_ACCESS_KEY: ""
+      AWS_DEFAULT_REGION: "us-east-1"  # optional, defaults to us-east-1
+      region_name: "us-east-1"         # overrides boto3 session region
+      s3_bucket_name: "tg-searcher-prod"
+      dynamo_table_name: "tg-searcher-prod"
+
+      # --- Optional overrides ---
+      # DECLARATION: ""
+      # ADDITIONAL_PROMPT: ""
