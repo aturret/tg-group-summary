@@ -20,33 +20,38 @@ RUN apt-get update && apt-get install -y \
 ENV UV_COMPILE_BYTECODE=1
 ENV UV_LINK_MODE=copy
 
-# 4. 复制依赖文件 (使用 uv.lock 而不是 requirements.txt)
-# 只要这两个文件不变，Docker 缓存就会被命中
+# 4. 复制依赖文件 (workspace root + all workspace members)
 COPY pyproject.toml uv.lock ./
+COPY packages/tg-summary-core/pyproject.toml ./packages/tg-summary-core/pyproject.toml
+COPY apps/entrypoint/pyproject.toml ./apps/entrypoint/pyproject.toml
 
-# 5. 安装依赖
+# 5. Create placeholder source dirs so uv sync can resolve workspace members
+RUN mkdir -p packages/tg-summary-core/src/tg_summary_core && \
+    touch packages/tg-summary-core/src/tg_summary_core/__init__.py
+
+# 6. 安装依赖
 # --frozen: 严格按照 lock 文件安装，不更新版本
 # --no-dev: 不安装开发依赖 (如 pytest 等)
 # --mount: 使用缓存挂载，加快重复构建速度
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev
 
-# 6. 将 uv 创建的虚拟环境加入 PATH
-# 这一步至关重要，它让后续的 `python` 命令直接使用虚拟环境中的解释器
+# 7. 将 uv 创建的虚拟环境加入 PATH
 ENV PATH="/app/.venv/bin:$PATH"
 
-# 7. 复制源代码
-COPY app/ ./app/
+# 8. 复制源代码
+COPY packages/tg-summary-core/src/ ./packages/tg-summary-core/src/
+COPY apps/entrypoint/main.py ./apps/entrypoint/main.py
+COPY conf/ ./conf/
 
-# 8. 环境变量设置 (保持你的逻辑)
-ENV PYTHONPATH=/app
+# 9. 环境变量设置
 ENV PYTHONUNBUFFERED=1
+ENV PROMPT_YAML_PATH=/app/conf/prompt.yaml
 
-# 9. 权限处理 (保持不变，但要确保用户拥有 .venv 的权限)
+# 10. 权限处理
 RUN addgroup --system app && adduser --system --ingroup app app \
     && chown -R app:app /app
 USER app
 
-# 10. 启动命令
-# 由于 PATH 已设置，这里的 python 会自动使用 /app/.venv/bin/python
-CMD ["python", "app/main.py"]
+# 11. 启动命令
+CMD ["python", "apps/entrypoint/main.py"]

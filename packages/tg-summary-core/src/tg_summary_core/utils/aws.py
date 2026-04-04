@@ -1,29 +1,16 @@
 import time
 
-from app.utils.common import get_logger
+from tg_summary_core.config import settings
+from tg_summary_core.utils.common import get_logger
 
 from boto3.dynamodb.conditions import Key
 import boto3
 
-import os
-
-DEFAULT_REGION = 'us-east-1'
-DEFAULT_S3_BUCKET_NAME = 'tg-searcher-prod'
-DEFAULT_DYNAMO_TABLE_NAME = 'tg-searcher-prod'
-
-
-class AWSConfig:
-    def __init__(self):
-        self.region_name = os.getenv('region_name', DEFAULT_REGION)
-        self.s3_bucket_name = os.getenv('s3_bucket_name', DEFAULT_S3_BUCKET_NAME)
-        self.dynamo_table_name = os.getenv('dynamo_table_name', DEFAULT_DYNAMO_TABLE_NAME)
-
 
 class AWSClient:
-    def __init__(self, cfg: AWSConfig):
-        self._cfg: AWSConfig = cfg
-        self._logger = get_logger(f'aws-client')
-        self._session = boto3.Session(region_name=cfg.region_name)
+    def __init__(self):
+        self._logger = get_logger('aws-client')
+        self._session = boto3.Session(region_name=settings.region_name)
 
     def get_recent_group_messages_by_day(
             self,
@@ -53,7 +40,7 @@ class AWSClient:
             table_name: str = None
     ) -> dict:
         if table_name is None:
-            table_name = self._cfg.dynamo_table_name
+            table_name = settings.dynamo_table_name
         dynamodb = self._session.resource('dynamodb')
         table = dynamodb.Table(table_name)
         response = table.get_item(Key=key)
@@ -66,7 +53,7 @@ class AWSClient:
             expires_in: int = 600,
     ) -> str:
         if bucket_name is None:
-            bucket_name = self._cfg.s3_bucket_name
+            bucket_name = settings.s3_bucket_name
         s3_client = self._session.client('s3')
         try:
             presigned_url = s3_client.generate_presigned_url(
@@ -86,7 +73,7 @@ class AWSClient:
             table_name: str = None
     ) -> list[dict]:
         if table_name is None:
-            table_name = self._cfg.dynamo_table_name
+            table_name = settings.dynamo_table_name
         dynamodb = self._session.resource('dynamodb')
         table = dynamodb.Table(table_name)
         response = table.query(

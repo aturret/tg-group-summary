@@ -9,14 +9,18 @@ from pathlib import Path
 from PIL import Image
 
 from openai import OpenAI
-from app.report.text_cat import convert_item_to_json_text
-from app.utils.common import download_file, clean_files
+from tg_summary_core.config import settings
+from tg_summary_core.report.text_cat import convert_item_to_json_text
+from tg_summary_core.utils.common import download_file, clean_files
 
-# --- 配置 ---
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-DEFAULT_GPT_MODEL = os.getenv("OPENAI_GPT_MODEL", "gpt-5")  # 需要可用权限；没有就改成 gpt-4o
+_client = None
 
-client = OpenAI(api_key=OPENAI_API_KEY)
+
+def _get_client() -> OpenAI:
+    global _client
+    if _client is None:
+        _client = OpenAI(api_key=settings.openai_api_key)
+    return _client
 
 current_directory = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_DOWNLOAD_DIR = os.path.join(current_directory, "..", "..", "download")
@@ -107,7 +111,7 @@ def resolve_message_media(media: dict) -> Union[dict, None]:
 def generate_gpt_response_by_gpt_parts(
     gpt_parts: List[dict],
     prompt: str,
-    model: str = DEFAULT_GPT_MODEL,
+    model: str = None,
     *,
     temperature: float = 1.0,
     reasoning_effort: str = "medium",  # "minimal" | "medium" | "high"
@@ -119,6 +123,9 @@ def generate_gpt_response_by_gpt_parts(
       - "image_url" -> input_image.image_url
       - "image_base64" -> 包装成 data URL 后放到 image_url
     """
+    if model is None:
+        model = settings.openai_gpt_model
+
     content_list: List[Dict[str, Any]] = []
 
     for part in gpt_parts or []:
@@ -163,7 +170,7 @@ def generate_gpt_response_by_gpt_parts(
     if not content_list:
         content_list.append({"type": "input_text", "text": ""})
 
-    response = client.responses.create(
+    response = _get_client().responses.create(
         model=model,
         input=[{"role": "user", "content": content_list}],
         reasoning={"effort": reasoning_effort},

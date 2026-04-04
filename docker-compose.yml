@@ -1,6 +1,9 @@
 services:
   tg-group-summary:
     image: ghcr.io/aturret/tg-group-summary:latest
+    build:
+      context: .
+      dockerfile: apps/entrypoint/Dockerfile
     restart: unless-stopped
     environment:
       # --- Telegram ---

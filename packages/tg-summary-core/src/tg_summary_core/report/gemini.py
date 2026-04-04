@@ -8,14 +8,18 @@ from google.genai import types
 from PIL import Image
 from PIL.ImageFile import ImageFile
 
-from app.report.text_cat import convert_item_to_json_text
-from app.utils.common import download_file, clean_files
+from tg_summary_core.config import settings
+from tg_summary_core.report.text_cat import convert_item_to_json_text
+from tg_summary_core.utils.common import download_file, clean_files
 
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-DEFAULT_GEMINI_MODEL = "gemini-3.1-pro-preview"
-DEFAULT_GEMINI_FAST_MODEL = "gemini-3.1-flash-lite-preview"
+_client = None
 
-client = genai.Client(api_key=GOOGLE_API_KEY)
+
+def _get_client() -> genai.Client:
+    global _client
+    if _client is None:
+        _client = genai.Client(api_key=settings.google_api_key)
+    return _client
 
 current_directory = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_DOWNLOAD_DIR = os.path.join(current_directory, "..", '..', "download")
@@ -93,7 +97,7 @@ def wait_until_all_parts_active(
         for uploaded_file in uploaded_files_to_check:
             try:
                 # Retrieve the file status from the Gemini API
-                file_status = client.files.get(name=uploaded_file.name)
+                file_status = _get_client().files.get(name=uploaded_file.name)
                 print(f"File '{file_status.display_name}' ({file_status.name}) status: {file_status.state}")
 
                 if file_status.state == types.FileState.ACTIVE:
@@ -123,7 +127,7 @@ def wait_until_all_parts_active(
 
 def generate_gemini_response_by_gemini_parts(
         gemini_parts: list,
-        model: str = DEFAULT_GEMINI_MODEL,
+        model: str = None,
         seed: Optional[int] = None,
         temperature: float = 1
 ) -> str:
@@ -140,7 +144,7 @@ def generate_gemini_response_by_gemini_parts(
         The generated text response
     """
     if model is None:
-        model = DEFAULT_GEMINI_MODEL
+        model = settings.default_gemini_model
 
     config = types.GenerateContentConfig(
         candidate_count=1,
@@ -151,7 +155,7 @@ def generate_gemini_response_by_gemini_parts(
     processed_gemini_parts = count_token_and_remove(gemini_parts, model)
 
     try:
-        response = client.models.generate_content(
+        response = _get_client().models.generate_content(
             model=model,
             contents=processed_gemini_parts,
             config=config
@@ -170,7 +174,7 @@ def count_token_and_remove(
         if not content:
             continue
         try:
-            count_resp = client.models.count_tokens(
+            count_resp = _get_client().models.count_tokens(
                 model=model,
                 contents=[content]
             )
@@ -187,7 +191,7 @@ def count_token_and_remove(
 
 def generate_gemini_response(
         prompt: str,
-        model: str = DEFAULT_GEMINI_MODEL,
+        model: str = None,
         seed: Optional[int] = None,
         temperature: float = 1
 ) -> str:
@@ -204,7 +208,7 @@ def generate_gemini_response(
         The generated text response
     """
     if model is None:
-        model = DEFAULT_GEMINI_MODEL
+        model = settings.default_gemini_model
 
     config = types.GenerateContentConfig(
         seed=seed,
@@ -212,7 +216,7 @@ def generate_gemini_response(
     )
 
     try:
-        response = client.models.generate_content(
+        response = _get_client().models.generate_content(
             model=model,
             contents=prompt,
             config=config
@@ -235,7 +239,7 @@ def generate_gemini_response(
 def generate_gemini_response_multiple_seeds(
         gemini_parts: list,
         seeds: List[int],
-        model: str = DEFAULT_GEMINI_MODEL,
+        model: str = None,
         temperature: float = 1,
 ) -> List[str]:
     """
@@ -271,7 +275,7 @@ def generate_gemini_response_multiple_seeds(
 def generate_gemini_response_multiple_times(
         gemini_parts: list,
         num_calls: int = 3,
-        model: str = DEFAULT_GEMINI_MODEL,
+        model: str = None,
         base_seed: Optional[int] = None,
         temperature: float = 1
 ) -> List[str]:
@@ -305,7 +309,7 @@ def generate_gemini_response_multiple_times(
 def upload_video_to_gemini(video_path: str):
     print(f"Uploading video: {video_path}...")
     try:
-        video_file = client.files.upload(file=video_path)
+        video_file = _get_client().files.upload(file=video_path)
         print(f"Uploaded file '{video_file.display_name}' as: {video_file.name}")
         return video_file
     except Exception as e:
