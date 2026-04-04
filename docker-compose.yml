@@ -25,3 +25,5 @@ services:
       # --- Optional overrides ---
       # DECLARATION: ""
       # ADDITIONAL_PROMPT: ""
+    volumes:
+      - ./conf/prompt.yaml:/app/conf/prompt.yaml:ro
