@@ -95,6 +95,27 @@ The Dockerfile copies `packages/`, `apps/entrypoint/`, `conf/`, installs deps vi
 
 `.github/workflows/ci.yml` builds and pushes to `ghcr.io` on push to `main`. Dockerfile path: `apps/entrypoint/Dockerfile`, context: `.`.
 
+## Testing
+
+**All newly added code must have unit tests.** Tests live in the `tests/` directory at the repo root.
+
+```bash
+# Run all tests
+uv run pytest tests/ -v
+
+# Run with coverage
+uv run pytest tests/ -v --cov=tg_summary_core --cov-report=term-missing
+
+# Run a specific test file
+uv run pytest tests/report/test_gemini.py -v
+```
+
+- Test directory mirrors the source layout (`tests/report/`, `tests/utils/`)
+- External services (AWS, Gemini, OpenAI, Telegram) are mocked — tests never make real API calls
+- `moto` for AWS (DynamoDB, S3), `unittest.mock.patch` for AI clients and HTTP calls, `freezegun` for time
+- The root `conftest.py` provides an autouse fixture that reloads the `settings` singleton with test env vars
+- `tests/report/conftest.py` resets LLM client singletons between tests
+
 ## Adding a New App
 
 1. Create `apps/<name>/pyproject.toml` with `dependencies = ["tg-summary-core"]` and `tg-summary-core = { workspace = true }` source.

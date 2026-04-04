@@ -10,6 +10,24 @@ members = ["packages/*", "apps/*"]
 [tool.uv]
 package = false
 
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "requests-mock>=1.12",
+    "moto[dynamodb,s3]>=5.0",
+    "freezegun>=1.4",
+    "tg-summary-core",
+]
+
+[tool.uv.sources]
+tg-summary-core = { workspace = true }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["packages/tg-summary-core/src"]
+addopts = ["-v", "--tb=short", "--strict-markers"]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
