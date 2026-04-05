@@ -55,7 +55,7 @@ jobs:
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ github.event.repository.name }}:buildcache
           cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ github.event.repository.name }}:buildcache,mode=max
       - name: Telegram Notification on Success
-        uses: appleboy/telegram-action@master
+        uses: appleboy/telegram-action@847a2d3240d33a6137191cc89b3ad7f53e427c06  # master
         if: success()
         with:
           to: ${{ secrets.TELEGRAM_DEBUG_CHANNEL_ID }}
@@ -77,7 +77,7 @@ jobs:
             🔗 [View Image](https://github.com/${{ github.repository }}/pkgs/container/${{ github.event.repository.name }})
           format: markdown
       - name: Telegram Notification on Failure
-        uses: appleboy/telegram-action@master
+        uses: appleboy/telegram-action@847a2d3240d33a6137191cc89b3ad7f53e427c06  # master
         if: failure()
         with:
           to: ${{ secrets.TELEGRAM_DEBUG_CHANNEL_ID }}

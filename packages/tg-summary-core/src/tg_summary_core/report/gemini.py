@@ -25,7 +25,7 @@ current_directory = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_DOWNLOAD_DIR = os.path.join(current_directory, "..", "..", "download")
 os.makedirs(DEFAULT_DOWNLOAD_DIR, exist_ok=True)
 
-remove_file_path_list = []
+remove_file_path_list: list[str] = []
 
 
 def generate_gemini_parts_by_group_messages(group_messages: list) -> list:
@@ -89,6 +89,9 @@ def wait_until_all_parts_active(gemini_parts: list, timeout_seconds: int = 600, 
     while True:
         all_active = True
         for uploaded_file in uploaded_files_to_check:
+            if uploaded_file.name is None:
+                print(f"Warning: uploaded file has no name, skipping status check: {uploaded_file}")
+                continue
             try:
                 # Retrieve the file status from the Gemini API
                 file_status = _get_client().files.get(name=uploaded_file.name)

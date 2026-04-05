@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+from typing import cast
 
 import requests
 
@@ -17,7 +18,7 @@ def save_json_to_file(data: list[dict], filename: str) -> None:
 
 def load_json_from_file(filename: str) -> list[dict]:
     with open(filename, encoding="utf-8") as f:
-        return json.load(f)
+        return cast(list[dict], json.load(f))
 
 
 def save_html_to_file(html_text: str, filename: str) -> None:
@@ -27,7 +28,7 @@ def save_html_to_file(html_text: str, filename: str) -> None:
 
 def download_file(url: str, dest_path: str):
     try:
-        response = requests.get(url, stream=True)
+        response = requests.get(url, stream=True, timeout=30)
         response.raise_for_status()  # Raise an HTTPError for bad responses (4xx or 5xx)
         with open(dest_path, "wb") as f:
             for chunk in response.iter_content(chunk_size=8192):
