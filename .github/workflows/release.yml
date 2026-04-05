@@ -25,6 +25,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Push to GHCR
+        id: push
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -34,6 +35,28 @@ jobs:
           tags: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:latest
           cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:buildcache
           cache-to: type=registry,ref=ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:buildcache,mode=max
+      - name: Telegram Notification on Success
+        uses: appleboy/telegram-action@master
+        if: success()
+        with:
+          to: ${{ secrets.TELEGRAM_DEBUG_CHANNEL_ID }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          message: |
+            ✅ **Docker Image Published Successfully**
+
+            📦 Image: `ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:latest`
+            🏷️ Tag: `latest`
+            🔑 Digest: `${{ steps.push.outputs.digest }}`
+            🕐 Timestamp: `${{ github.event.head_commit.timestamp }}`
+
+            📝 Commit: `${{ github.sha }}`
+            Message: ${{ github.event.head_commit.message }}
+            Author: `${{ github.actor }}`
+            Branch: `${{ github.ref_name }}`
+
+            🔗 [View Workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            🔗 [View Image](https://github.com/${{ github.repository }}/pkgs/container/${{ github.event.repository.name }})
+          format: markdown
       - name: Telegram Notification on Failure
         uses: appleboy/telegram-action@master
         if: failure()
@@ -41,10 +64,10 @@ jobs:
           to: ${{ secrets.TELEGRAM_DEBUG_CHANNEL_ID }}
           token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           message: |
-            ❌ **GitHub Actions 失败通知** 仓库: `${{ github.repository }}`
-            分支: `${{ github.ref_name }}`
-            提交人: `${{ github.actor }}`
-            详情: [查看 Workflow 运行详情](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            ❌ **GitHub Actions Failed** Repo: `${{ github.repository }}`
+            Branch: `${{ github.ref_name }}`
+            Author: `${{ github.actor }}`
+            Details: [View Workflow Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
 
-            **Job: ${{ github.job }} 运行失败!**
+            **Job: ${{ github.job }} failed!**
           format: markdown
