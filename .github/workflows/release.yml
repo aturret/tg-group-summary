@@ -54,6 +54,12 @@ jobs:
           tags: ${{ steps.tags.outputs.tags }}
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ github.event.repository.name }}:buildcache
           cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ github.event.repository.name }}:buildcache,mode=max
+      - name: Prepare commit message
+        id: commit_msg
+        if: success() || failure()
+        run: |
+          MSG=$(echo "${{ github.event.head_commit.message }}" | head -1 | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g')
+          echo "first_line=${MSG}" >> "$GITHUB_OUTPUT"
       - name: Telegram Notification on Success
         uses: appleboy/telegram-action@847a2d3240d33a6137191cc89b3ad7f53e427c06  # master
         if: success()
@@ -61,21 +67,21 @@ jobs:
           to: ${{ secrets.TELEGRAM_DEBUG_CHANNEL_ID }}
           token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           message: |
-            ✅ **Docker Image Published Successfully**
+            ✅ <b>Docker Image Published Successfully</b>
 
-            📦 Image: `${{ steps.tags.outputs.tags }}`
-            🏷️ Tags: `${{ steps.tags.outputs.display_tags }}`
-            🔑 Digest: `${{ steps.push.outputs.digest }}`
-            🕐 Timestamp: `${{ github.event.head_commit.timestamp }}`
+            📦 Image: <code>${{ steps.tags.outputs.tags }}</code>
+            🏷️ Tags: <code>${{ steps.tags.outputs.display_tags }}</code>
+            🔑 Digest: <code>${{ steps.push.outputs.digest }}</code>
+            🕐 Timestamp: <code>${{ github.event.head_commit.timestamp }}</code>
 
-            📝 Commit: `${{ github.sha }}`
-            Message: ${{ github.event.head_commit.message }}
-            Author: `${{ github.actor }}`
-            Ref: `${{ github.ref_name }}`
+            📝 Commit: <code>${{ github.sha }}</code>
+            Message: ${{ steps.commit_msg.outputs.first_line }}
+            Author: <code>${{ github.actor }}</code>
+            Ref: <code>${{ github.ref_name }}</code>
 
-            🔗 [View Workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
-            🔗 [View Image](https://github.com/${{ github.repository }}/pkgs/container/${{ github.event.repository.name }})
-          format: markdown
+            🔗 <a href="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}">View Workflow</a>
+            🔗 <a href="https://github.com/${{ github.repository }}/pkgs/container/${{ github.event.repository.name }}">View Image</a>
+          format: html
       - name: Telegram Notification on Failure
         uses: appleboy/telegram-action@847a2d3240d33a6137191cc89b3ad7f53e427c06  # master
         if: failure()
@@ -83,10 +89,10 @@ jobs:
           to: ${{ secrets.TELEGRAM_DEBUG_CHANNEL_ID }}
           token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           message: |
-            ❌ **GitHub Actions Failed** Repo: `${{ github.repository }}`
-            Ref: `${{ github.ref_name }}`
-            Author: `${{ github.actor }}`
-            Details: [View Workflow Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            ❌ <b>GitHub Actions Failed</b> Repo: <code>${{ github.repository }}</code>
+            Ref: <code>${{ github.ref_name }}</code>
+            Author: <code>${{ github.actor }}</code>
+            Details: <a href="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}">View Workflow Run</a>
 
-            **Job: ${{ github.job }} failed!**
-          format: markdown
+            <b>Job: ${{ github.job }} failed!</b>
+          format: html
