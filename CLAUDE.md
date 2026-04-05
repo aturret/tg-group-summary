@@ -106,7 +106,7 @@ The Dockerfile copies `packages/`, `apps/entrypoint/`, `conf/`, installs deps vi
 ## CI/CD
 
 - `.github/workflows/ci.yml` — lint (ruff) + type check (mypy) + test (pytest + Codecov) on PRs and pushes to main.
-- `.github/workflows/release.yml` — builds and pushes Docker image to `ghcr.io` on push to `main`.
+- `.github/workflows/release.yml` — builds and pushes Docker image to `ghcr.io` on push to `main` (tagged `stage`) and on version tags `v*` (tagged `latest` + version). Sends Telegram notifications on success/failure.
 
 ## Testing
 

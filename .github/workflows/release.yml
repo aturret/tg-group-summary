@@ -1,16 +1,23 @@
 name: Release Docker image
+
 on:
   push:
     branches:
       - main
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
 
 jobs:
   push_to_ghcr:
     name: Push Docker image to GHCR
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
     steps:
       - name: Check out the repo
         uses: actions/checkout@v4
@@ -21,9 +28,21 @@ jobs:
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
-          registry: ghcr.io
+          registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Determine tags
+        id: tags
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ github.event.repository.name }}"
+          IMAGE=$(echo "$IMAGE" | tr '[:upper:]' '[:lower:]')
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            echo "tags=${IMAGE}:latest,${IMAGE}:${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+            echo "display_tags=latest, ${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tags=${IMAGE}:stage" >> "$GITHUB_OUTPUT"
+            echo "display_tags=stage" >> "$GITHUB_OUTPUT"
+          fi
       - name: Push to GHCR
         id: push
         uses: docker/build-push-action@v6
@@ -32,9 +51,9 @@ jobs:
           file: apps/entrypoint/Dockerfile
           push: true
           platforms: linux/amd64,linux/386,linux/arm64
-          tags: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:latest
-          cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:buildcache
-          cache-to: type=registry,ref=ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:buildcache,mode=max
+          tags: ${{ steps.tags.outputs.tags }}
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ github.event.repository.name }}:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ github.event.repository.name }}:buildcache,mode=max
       - name: Telegram Notification on Success
         uses: appleboy/telegram-action@master
         if: success()
@@ -44,15 +63,15 @@ jobs:
           message: |
             ✅ **Docker Image Published Successfully**
 
-            📦 Image: `ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:latest`
-            🏷️ Tag: `latest`
+            📦 Image: `${{ steps.tags.outputs.tags }}`
+            🏷️ Tags: `${{ steps.tags.outputs.display_tags }}`
             🔑 Digest: `${{ steps.push.outputs.digest }}`
             🕐 Timestamp: `${{ github.event.head_commit.timestamp }}`
 
             📝 Commit: `${{ github.sha }}`
             Message: ${{ github.event.head_commit.message }}
             Author: `${{ github.actor }}`
-            Branch: `${{ github.ref_name }}`
+            Ref: `${{ github.ref_name }}`
 
             🔗 [View Workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
             🔗 [View Image](https://github.com/${{ github.repository }}/pkgs/container/${{ github.event.repository.name }})
@@ -65,7 +84,7 @@ jobs:
           token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           message: |
             ❌ **GitHub Actions Failed** Repo: `${{ github.repository }}`
-            Branch: `${{ github.ref_name }}`
+            Ref: `${{ github.ref_name }}`
             Author: `${{ github.actor }}`
             Details: [View Workflow Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
 
