@@ -1,5 +1,3 @@
-from typing import Optional
-
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -15,8 +13,8 @@ class Settings(BaseSettings):
     additional_prompt: str = ""
 
     # AI providers
-    google_api_key: Optional[str] = None
-    openai_api_key: Optional[str] = None
+    google_api_key: str | None = None
+    openai_api_key: str | None = None
     openai_gpt_model: str = "gpt-5"
     summary_model: str = "gemini-3-flash-preview"
     default_gemini_model: str = "gemini-3.1-pro-preview"

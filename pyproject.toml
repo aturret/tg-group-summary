@@ -18,6 +18,9 @@ dev = [
     "moto[dynamodb,s3]>=5.0",
     "freezegun>=1.4",
     "tg-summary-core",
+    "ruff>=0.8",
+    "mypy>=1.14",
+    "pre-commit>=3.0",
 ]
 
 [tool.uv.sources]
@@ -27,6 +30,36 @@ tg-summary-core = { workspace = true }
 testpaths = ["tests"]
 pythonpath = ["packages/tg-summary-core/src"]
 addopts = ["-v", "--tb=short", "--strict-markers"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 120
+src = ["packages/tg-summary-core/src", "apps", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "I",    # isort
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "SIM",  # flake8-simplify
+]
+
+[tool.ruff.lint.per-file-ignores]
+"packages/tg-summary-core/src/tg_summary_core/report/prompt.py" = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["tg_summary_core"]
+
+[tool.mypy]
+python_version = "3.13"
+mypy_path = "packages/tg-summary-core/src"
+packages = ["tg_summary_core"]
+ignore_missing_imports = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
 
 [build-system]
 requires = ["hatchling"]

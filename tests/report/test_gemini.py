@@ -1,22 +1,20 @@
-import time as time_module
-from unittest.mock import patch, MagicMock, PropertyMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from google.genai import types
 
 from tg_summary_core.report.gemini import (
     _get_client,
-    resolve_message_media,
-    wait_until_all_parts_active,
     count_token_and_remove,
+    generate_gemini_parts_by_group_messages,
     generate_gemini_response,
     generate_gemini_response_by_gemini_parts,
     generate_gemini_response_multiple_seeds,
     generate_gemini_response_multiple_times,
+    resolve_message_media,
     upload_video_to_gemini,
-    generate_gemini_parts_by_group_messages,
+    wait_until_all_parts_active,
 )
-import tg_summary_core.report.gemini as gemini_mod
 
 
 class TestGetClient:
@@ -261,8 +259,6 @@ class TestMultipleTimes:
     def test_seeds_default(self, mock_gen):
         mock_gen.return_value = "r"
         generate_gemini_response_multiple_times(["parts"], num_calls=3)
-        seeds_used = [call.kwargs.get("seed") or call[1].get("seed", call[0][1] if len(call[0]) > 1 else None)
-                      for call in mock_gen.call_args_list]
         # The seeds should be passed via generate_gemini_response_multiple_seeds
         assert mock_gen.call_count == 3
 

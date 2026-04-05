@@ -2,10 +2,10 @@ import json
 from decimal import Decimal
 
 from tg_summary_core.report.text_cat import (
-    convert_decimal,
-    convert_items_to_json_text,
-    convert_item_to_json_text,
     KEY_ORDER,
+    convert_decimal,
+    convert_item_to_json_text,
+    convert_items_to_json_text,
 )
 
 

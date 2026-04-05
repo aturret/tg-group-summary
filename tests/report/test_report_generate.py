@@ -1,13 +1,11 @@
-from unittest.mock import patch, MagicMock, call
-
-import pytest
+from unittest.mock import MagicMock, patch
 
 from tg_summary_core.report.report_generate import (
+    generate_llm_response,
+    generate_llm_response_and_send_to_telegram,
     get_daily_group_chat,
     get_prompt,
-    generate_llm_response,
     send_to_telegram,
-    generate_llm_response_and_send_to_telegram,
 )
 from tg_summary_core.report.report_generate import test_get_daily_report_multimodal as _multimodal_fn
 
@@ -18,7 +16,9 @@ class TestGetDailyGroupChat:
         mock_client = MagicMock()
         mock_aws_cls.return_value = mock_client
         mock_client.get_recent_group_messages_by_day.return_value = [
-            {"messageId": 1}, {"messageId": 2}, {"messageId": 3}
+            {"messageId": 1},
+            {"messageId": 2},
+            {"messageId": 3},
         ]
         result = get_daily_group_chat()
         assert result == [{"messageId": 3}, {"messageId": 2}, {"messageId": 1}]
@@ -51,9 +51,7 @@ class TestGetPrompt:
     def test_calls_with_settings(self, mock_gen):
         mock_gen.return_value = "prompt text"
         result = get_prompt()
-        mock_gen.assert_called_once_with(
-            "TestChat", "", "", analyze_media=True, end_timestamp=None
-        )
+        mock_gen.assert_called_once_with("TestChat", "", "", analyze_media=True, end_timestamp=None)
         assert result == "prompt text"
 
 
@@ -116,9 +114,11 @@ class TestSendToTelegram:
         fail_resp.json.return_value = {"ok": False}
         mock_post.return_value = fail_resp
 
-        with patch("tg_summary_core.report.report_generate.generate_gemini_response", return_value="fixed"):
-            with patch("tg_summary_core.report.report_generate.fix_telegram_text", return_value="fix"):
-                send_to_telegram("<b>Always fails</b>")
+        with (
+            patch("tg_summary_core.report.report_generate.generate_gemini_response", return_value="fixed"),
+            patch("tg_summary_core.report.report_generate.fix_telegram_text", return_value="fix"),
+        ):
+            send_to_telegram("<b>Always fails</b>")
         assert mock_post.call_count == 5
 
     @patch("tg_summary_core.report.report_generate.time.sleep")

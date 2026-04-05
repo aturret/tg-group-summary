@@ -1,17 +1,16 @@
 import base64
-import os
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from PIL import Image
 
 from tg_summary_core.report.gpt import (
+    _ensure_valid_image,
     _get_client,
     _to_data_url,
-    _ensure_valid_image,
     generate_gpt_parts_by_group_messages,
-    resolve_message_media,
     generate_gpt_response_by_gpt_parts,
+    resolve_message_media,
 )
 
 
@@ -63,7 +62,7 @@ class TestEnsureValidImage:
         bad_path = str(tmp_path / "bad.png")
         with open(bad_path, "wb") as f:
             f.write(b"not an image at all")
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             _ensure_valid_image(bad_path)
 
 
@@ -150,7 +149,7 @@ class TestGenerateGptResponseByGptParts:
         mock_client.responses.create.return_value = mock_response
 
         parts = [{"type": "image_base64", "image_data": "abc123"}]
-        result = generate_gpt_response_by_gpt_parts(parts, "test")
+        generate_gpt_response_by_gpt_parts(parts, "test")
         call_args = mock_client.responses.create.call_args
         content = call_args[1]["input"][0]["content"]
         image_parts = [c for c in content if c["type"] == "input_image"]
@@ -181,7 +180,7 @@ class TestGenerateGptResponseByGptParts:
         mock_client.responses.create.return_value = mock_response
 
         parts = [{"type": "text", "text": "hello"}]
-        result = generate_gpt_response_by_gpt_parts(parts, "")
+        generate_gpt_response_by_gpt_parts(parts, "")
         call_args = mock_client.responses.create.call_args
         content = call_args[1]["input"][0]["content"]
         text_parts = [c for c in content if c["type"] == "input_text"]

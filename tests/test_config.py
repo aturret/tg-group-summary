@@ -1,5 +1,3 @@
-import pytest
-
 from tg_summary_core.config import Settings
 
 

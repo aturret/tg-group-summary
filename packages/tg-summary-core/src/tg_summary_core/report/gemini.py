@@ -1,7 +1,6 @@
-import time
-from typing import Union, List, Optional
 import os
-from urllib.parse import urlparse, parse_qs, unquote
+import time
+from urllib.parse import unquote, urlparse
 
 from google import genai
 from google.genai import types
@@ -10,7 +9,7 @@ from PIL.ImageFile import ImageFile
 
 from tg_summary_core.config import settings
 from tg_summary_core.report.text_cat import convert_item_to_json_text
-from tg_summary_core.utils.common import download_file, clean_files
+from tg_summary_core.utils.common import clean_files, download_file
 
 _client = None
 
@@ -21,8 +20,9 @@ def _get_client() -> genai.Client:
         _client = genai.Client(api_key=settings.google_api_key)
     return _client
 
+
 current_directory = os.path.dirname(os.path.abspath(__file__))
-DEFAULT_DOWNLOAD_DIR = os.path.join(current_directory, "..", '..', "download")
+DEFAULT_DOWNLOAD_DIR = os.path.join(current_directory, "..", "..", "download")
 os.makedirs(DEFAULT_DOWNLOAD_DIR, exist_ok=True)
 
 remove_file_path_list = []
@@ -33,8 +33,8 @@ def generate_gemini_parts_by_group_messages(group_messages: list) -> list:
     for message in group_messages:
         message_json_text = convert_item_to_json_text(message)
         gemini_parts.append(message_json_text)
-        if message.get('media'):
-            valid_media = resolve_message_media(message.get('media'))
+        if message.get("media"):
+            valid_media = resolve_message_media(message.get("media"))
             if valid_media:
                 gemini_parts.append(valid_media)
     wait_until_all_parts_active(gemini_parts)
@@ -42,18 +42,18 @@ def generate_gemini_parts_by_group_messages(group_messages: list) -> list:
     return gemini_parts
 
 
-def resolve_message_media(media: dict) -> Union[ImageFile, types.File]:
+def resolve_message_media(media: dict) -> ImageFile | types.File:
     result = None
     # download the file to your disk
-    urlparser = urlparse(media['presignedUrl'])
+    urlparser = urlparse(media["presignedUrl"])
     path = urlparser.path
     filename = os.path.basename(unquote(path))  # get the filename from s3 presigned url
     file_path = os.path.join(DEFAULT_DOWNLOAD_DIR, filename)
-    if download_file(media['presignedUrl'], file_path):
-        if media.get('mediaType') == 'photo':  # use pillow to open the image files
+    if download_file(media["presignedUrl"], file_path):
+        if media.get("mediaType") == "photo":  # use pillow to open the image files
             image = Image.open(file_path)
             result = image
-        elif media.get('mediaType') == 'video':  # upload video to google
+        elif media.get("mediaType") == "video":  # upload video to google
             uploaded_file = upload_video_to_gemini(file_path)
             if uploaded_file:
                 result = uploaded_file
@@ -64,11 +64,7 @@ def resolve_message_media(media: dict) -> Union[ImageFile, types.File]:
         return result
 
 
-def wait_until_all_parts_active(
-        gemini_parts: list,
-        timeout_seconds: int = 600,
-        poll_interval_seconds: int = 10
-):
+def wait_until_all_parts_active(gemini_parts: list, timeout_seconds: int = 600, poll_interval_seconds: int = 10):
     """
     Waits for all uploaded `google.generativeai.types.File` objects in `gemini_parts`
     to become 'ACTIVE'.
@@ -82,9 +78,7 @@ def wait_until_all_parts_active(
         TimeoutError: If any file does not become ACTIVE within the timeout.
         Exception: If there's an API error checking file status or a file fails.
     """
-    uploaded_files_to_check = [
-        part for part in gemini_parts if isinstance(part, types.File)
-    ]
+    uploaded_files_to_check = [part for part in gemini_parts if isinstance(part, types.File)]
 
     if not uploaded_files_to_check:
         return  # No uploaded files to wait for
@@ -126,10 +120,7 @@ def wait_until_all_parts_active(
 
 
 def generate_gemini_response_by_gemini_parts(
-        gemini_parts: list,
-        model: str = None,
-        seed: Optional[int] = None,
-        temperature: float = 1
+    gemini_parts: list, model: str = None, seed: int | None = None, temperature: float = 1
 ) -> str:
     """
     Generate a response from Gemini using the provided parts.
@@ -146,38 +137,25 @@ def generate_gemini_response_by_gemini_parts(
     if model is None:
         model = settings.default_gemini_model
 
-    config = types.GenerateContentConfig(
-        candidate_count=1,
-        seed=seed,
-        temperature=temperature
-    )
+    config = types.GenerateContentConfig(candidate_count=1, seed=seed, temperature=temperature)
 
     processed_gemini_parts = count_token_and_remove(gemini_parts, model)
 
     try:
-        response = _get_client().models.generate_content(
-            model=model,
-            contents=processed_gemini_parts,
-            config=config
-        )
+        response = _get_client().models.generate_content(model=model, contents=processed_gemini_parts, config=config)
         return response.text
     except Exception as e:
         print(f"Error generating content: {e}")
         return f"Error: {str(e)}"
 
 
-def count_token_and_remove(
-        gemini_parts: list, model: str
-) -> list:
+def count_token_and_remove(gemini_parts: list, model: str) -> list:
     result_list = []
     for content in gemini_parts:
         if not content:
             continue
         try:
-            count_resp = _get_client().models.count_tokens(
-                model=model,
-                contents=[content]
-            )
+            count_resp = _get_client().models.count_tokens(model=model, contents=[content])
             input_token = count_resp.total_tokens
             if input_token > 200000:  # if above it, remove it from the list
                 continue
@@ -189,12 +167,7 @@ def count_token_and_remove(
     return result_list
 
 
-def generate_gemini_response(
-        prompt: str,
-        model: str = None,
-        seed: Optional[int] = None,
-        temperature: float = 1
-) -> str:
+def generate_gemini_response(prompt: str, model: str = None, seed: int | None = None, temperature: float = 1) -> str:
     """
     Generate a response from Gemini using a text prompt.
 
@@ -210,17 +183,10 @@ def generate_gemini_response(
     if model is None:
         model = settings.default_gemini_model
 
-    config = types.GenerateContentConfig(
-        seed=seed,
-        temperature=temperature
-    )
+    config = types.GenerateContentConfig(seed=seed, temperature=temperature)
 
     try:
-        response = _get_client().models.generate_content(
-            model=model,
-            contents=prompt,
-            config=config
-        )
+        response = _get_client().models.generate_content(model=model, contents=prompt, config=config)
 
         if not response.text:
             candidates = response.candidates
@@ -237,11 +203,11 @@ def generate_gemini_response(
 
 
 def generate_gemini_response_multiple_seeds(
-        gemini_parts: list,
-        seeds: List[int],
-        model: str = None,
-        temperature: float = 1,
-) -> List[str]:
+    gemini_parts: list,
+    seeds: list[int],
+    model: str = None,
+    temperature: float = 1,
+) -> list[str]:
     """
     Generate multiple responses from Gemini using different random seeds.
 
@@ -256,13 +222,10 @@ def generate_gemini_response_multiple_seeds(
     """
     results = []
     for i, seed in enumerate(seeds):
-        print(f"Generating response with seed {seed} ({i+1}/{len(seeds)})...")
+        print(f"Generating response with seed {seed} ({i + 1}/{len(seeds)})...")
         try:
             response = generate_gemini_response_by_gemini_parts(
-                gemini_parts=gemini_parts,
-                model=model,
-                seed=seed,
-                temperature=temperature
+                gemini_parts=gemini_parts, model=model, seed=seed, temperature=temperature
             )
             results.append(response)
         except Exception as e:
@@ -273,12 +236,8 @@ def generate_gemini_response_multiple_seeds(
 
 
 def generate_gemini_response_multiple_times(
-        gemini_parts: list,
-        num_calls: int = 3,
-        model: str = None,
-        base_seed: Optional[int] = None,
-        temperature: float = 1
-) -> List[str]:
+    gemini_parts: list, num_calls: int = 3, model: str = None, base_seed: int | None = None, temperature: float = 1
+) -> list[str]:
     """
     Generate multiple responses from Gemini using different random seeds.
 
@@ -293,16 +252,10 @@ def generate_gemini_response_multiple_times(
     Returns:
         List of generated text responses
     """
-    if base_seed is None:
-        seeds = list(range(1, num_calls + 1))
-    else:
-        seeds = [base_seed + i for i in range(num_calls)]
+    seeds = list(range(1, num_calls + 1)) if base_seed is None else [base_seed + i for i in range(num_calls)]
 
     return generate_gemini_response_multiple_seeds(
-        gemini_parts=gemini_parts,
-        seeds=seeds,
-        model=model,
-        temperature=temperature
+        gemini_parts=gemini_parts, seeds=seeds, model=model, temperature=temperature
     )
 
 

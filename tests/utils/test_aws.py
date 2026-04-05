@@ -1,7 +1,3 @@
-import time
-from decimal import Decimal
-from unittest.mock import patch, MagicMock
-
 import boto3
 import pytest
 from moto import mock_aws
@@ -26,14 +22,16 @@ def dynamo_table():
                 {"AttributeName": "messageId", "AttributeType": "N"},
                 {"AttributeName": "timestamp", "AttributeType": "N"},
             ],
-            GlobalSecondaryIndexes=[{
-                "IndexName": "chatId-timestamp-index",
-                "KeySchema": [
-                    {"AttributeName": "chatId", "KeyType": "HASH"},
-                    {"AttributeName": "timestamp", "KeyType": "RANGE"},
-                ],
-                "Projection": {"ProjectionType": "ALL"},
-            }],
+            GlobalSecondaryIndexes=[
+                {
+                    "IndexName": "chatId-timestamp-index",
+                    "KeySchema": [
+                        {"AttributeName": "chatId", "KeyType": "HASH"},
+                        {"AttributeName": "timestamp", "KeyType": "RANGE"},
+                    ],
+                    "Projection": {"ProjectionType": "ALL"},
+                }
+            ],
             BillingMode="PAY_PER_REQUEST",
         )
         table.meta.client.get_waiter("table_exists").wait(TableName="tg-searcher-prod")
@@ -74,29 +72,33 @@ class TestGetRecentGroupMessagesByDay:
                 {"AttributeName": "messageId", "AttributeType": "N"},
                 {"AttributeName": "timestamp", "AttributeType": "N"},
             ],
-            GlobalSecondaryIndexes=[{
-                "IndexName": "chatId-timestamp-index",
-                "KeySchema": [
-                    {"AttributeName": "chatId", "KeyType": "HASH"},
-                    {"AttributeName": "timestamp", "KeyType": "RANGE"},
-                ],
-                "Projection": {"ProjectionType": "ALL"},
-            }],
+            GlobalSecondaryIndexes=[
+                {
+                    "IndexName": "chatId-timestamp-index",
+                    "KeySchema": [
+                        {"AttributeName": "chatId", "KeyType": "HASH"},
+                        {"AttributeName": "timestamp", "KeyType": "RANGE"},
+                    ],
+                    "Projection": {"ProjectionType": "ALL"},
+                }
+            ],
             BillingMode="PAY_PER_REQUEST",
         )
         table.meta.client.get_waiter("table_exists").wait(TableName="tg-searcher-prod")
 
         now = 1700100000
-        _seed_messages(table, 12345, [
-            {"messageId": 1, "timestamp": now - 3600, "user": "Alice", "text": "Hello"},
-            {"messageId": 2, "timestamp": now - 1800, "user": "Bob", "text": "World"},
-            {"messageId": 3, "timestamp": now - 200000, "user": "Old", "text": "Too old"},
-        ])
+        _seed_messages(
+            table,
+            12345,
+            [
+                {"messageId": 1, "timestamp": now - 3600, "user": "Alice", "text": "Hello"},
+                {"messageId": 2, "timestamp": now - 1800, "user": "Bob", "text": "World"},
+                {"messageId": 3, "timestamp": now - 200000, "user": "Old", "text": "Too old"},
+            ],
+        )
 
         client = AWSClient()
-        result = client.get_recent_group_messages_by_day(
-            chat_id=12345, recent_day=1, end_timestamp=now
-        )
+        result = client.get_recent_group_messages_by_day(chat_id=12345, recent_day=1, end_timestamp=now)
         # Should get messages 1 and 2 (within 1 day), not message 3
         message_ids = [int(m["messageId"]) for m in result]
         assert 1 in message_ids
@@ -118,14 +120,16 @@ class TestGetRecentGroupMessagesByDay:
                 {"AttributeName": "messageId", "AttributeType": "N"},
                 {"AttributeName": "timestamp", "AttributeType": "N"},
             ],
-            GlobalSecondaryIndexes=[{
-                "IndexName": "chatId-timestamp-index",
-                "KeySchema": [
-                    {"AttributeName": "chatId", "KeyType": "HASH"},
-                    {"AttributeName": "timestamp", "KeyType": "RANGE"},
-                ],
-                "Projection": {"ProjectionType": "ALL"},
-            }],
+            GlobalSecondaryIndexes=[
+                {
+                    "IndexName": "chatId-timestamp-index",
+                    "KeySchema": [
+                        {"AttributeName": "chatId", "KeyType": "HASH"},
+                        {"AttributeName": "timestamp", "KeyType": "RANGE"},
+                    ],
+                    "Projection": {"ProjectionType": "ALL"},
+                }
+            ],
             BillingMode="PAY_PER_REQUEST",
         )
         client = AWSClient()
@@ -225,9 +229,11 @@ class TestGetPresignedUrlForAllMessages:
         s3.put_object(Bucket="tg-searcher-prod", Key="path/photo.jpg", Body=b"img")
 
         client = AWSClient()
-        messages = [{
-            "media": {"mediaKey": "bucket/path/photo.jpg"},
-        }]
+        messages = [
+            {
+                "media": {"mediaKey": "bucket/path/photo.jpg"},
+            }
+        ]
         result = client._get_presigned_url_for_all_messages(messages)
         assert "presignedUrl" in result[0]["media"]
         assert "photo.jpg" in result[0]["media"]["presignedUrl"]
@@ -240,10 +246,12 @@ class TestGetPresignedUrlForAllMessages:
         s3.put_object(Bucket="tg-searcher-prod", Key="media/reply.jpg", Body=b"img")
 
         client = AWSClient()
-        messages = [{
-            "repliedMessage": {
-                "media": {"mediaKey": "media/reply.jpg"},
+        messages = [
+            {
+                "repliedMessage": {
+                    "media": {"mediaKey": "media/reply.jpg"},
+                }
             }
-        }]
+        ]
         result = client._get_presigned_url_for_all_messages(messages)
         assert "presignedUrl" in result[0]["repliedMessage"]["media"]

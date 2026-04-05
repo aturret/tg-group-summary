@@ -1,18 +1,16 @@
-import json
 import logging
-import os
+from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
 
-from unittest.mock import patch, MagicMock
 from tg_summary_core.utils.common import (
+    clean_files,
+    download_file,
     get_logger,
-    save_json_to_file,
     load_json_from_file,
     save_html_to_file,
-    download_file,
-    clean_files,
+    save_json_to_file,
 )
 
 

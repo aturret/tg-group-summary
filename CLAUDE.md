@@ -32,7 +32,19 @@ tg-group-summary/
 ├── conf/
 │   └── prompt.yaml                 # optional prompt/declaration overrides
 ├── docker-compose.yml
-└── .github/workflows/ci.yml
+├── .github/
+│   ├── workflows/
+│   │   ├── ci.yml              # lint + test on PRs and pushes to main
+│   │   └── release.yml         # Docker build + push to GHCR on push to main
+│   ├── ISSUE_TEMPLATE/
+│   │   ├── bug_report.md
+│   │   └── feature_request.md
+│   └── pull_request_template.md
+├── .codecov.yml
+├── .dockerignore
+├── .env.example
+├── .pre-commit-config.yaml
+└── Makefile
 ```
 
 ## Development Setup
@@ -93,7 +105,8 @@ The Dockerfile copies `packages/`, `apps/entrypoint/`, `conf/`, installs deps vi
 
 ## CI/CD
 
-`.github/workflows/ci.yml` builds and pushes to `ghcr.io` on push to `main`. Dockerfile path: `apps/entrypoint/Dockerfile`, context: `.`.
+- `.github/workflows/ci.yml` — lint (ruff) + type check (mypy) + test (pytest + Codecov) on PRs and pushes to main.
+- `.github/workflows/release.yml` — builds and pushes Docker image to `ghcr.io` on push to `main`.
 
 ## Testing
 
@@ -116,8 +129,39 @@ uv run pytest tests/report/test_gemini.py -v
 - The root `conftest.py` provides an autouse fixture that reloads the `settings` singleton with test env vars
 - `tests/report/conftest.py` resets LLM client singletons between tests
 
+## Development Tooling
+
+### Quick Commands (Makefile)
+
+```bash
+make install      # Install all deps + pre-commit hooks
+make lint         # Run ruff linter
+make format       # Auto-format with ruff
+make typecheck    # Run mypy
+make test         # Run pytest
+make test-cov     # Run pytest with coverage report
+make check        # Full local CI: lint + format-check + typecheck + test
+make pre-commit   # Run all pre-commit hooks
+make docker-build # Build Docker image locally
+make clean        # Remove caches and coverage files
+```
+
+### Linting & Formatting
+
+**Ruff** configured in root `pyproject.toml` under `[tool.ruff]`. Line length: 120. Rules: E, F, I, UP, B, SIM.
+
+### Type Checking
+
+**Mypy** configured in root `pyproject.toml` under `[tool.mypy]`. Currently lenient (`disallow_untyped_defs = false`) — tighten gradually.
+
+### Pre-commit
+
+Install hooks: `make install` or `uv run pre-commit install`. Config: `.pre-commit-config.yaml`.
+
 ## Adding a New App
 
 1. Create `apps/<name>/pyproject.toml` with `dependencies = ["tg-summary-core"]` and `tg-summary-core = { workspace = true }` source.
 2. Import from `tg_summary_core.*` as needed.
-3. Run `uv sync --all-packages` to update the lockfile.
+3. Add tests under `tests/apps/<name>/`.
+4. Update `known-first-party` in root `pyproject.toml` `[tool.ruff.lint.isort]`.
+5. Run `uv sync --all-packages` to update the lockfile.

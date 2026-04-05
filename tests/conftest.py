@@ -18,6 +18,7 @@ def _clean_settings(monkeypatch):
     monkeypatch.setenv("PROMPT_YAML_PATH", "/nonexistent/prompt.yaml")
 
     import tg_summary_core.config as config_mod
+
     new_settings = config_mod.Settings()
     config_mod.settings = new_settings
 

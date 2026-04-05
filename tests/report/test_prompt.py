@@ -1,15 +1,14 @@
-import pytest
 from freezegun import freeze_time
 
+import tg_summary_core.report.prompt as prompt_mod
 from tg_summary_core.report.prompt import (
-    get_beijing_date_str,
-    _load_prompt_config,
-    generate_telegram_message_daily_summary_prompt,
-    fix_telegram_text,
     DEFAULT_MEDIA_INSTRUCTION_ANALYZE,
     DEFAULT_MEDIA_INSTRUCTION_REFERENCE,
+    _load_prompt_config,
+    fix_telegram_text,
+    generate_telegram_message_daily_summary_prompt,
+    get_beijing_date_str,
 )
-import tg_summary_core.report.prompt as prompt_mod
 
 
 class TestGetBeijingDateStr:
@@ -85,7 +84,9 @@ class TestGenerateSummaryPrompt:
             encoding="utf-8",
         )
         monkeypatch.setattr(prompt_mod.settings, "prompt_yaml_path", str(yaml_file))
-        result = generate_telegram_message_daily_summary_prompt("TestGroup", declaration="decl", additional_prompt="add")
+        result = generate_telegram_message_daily_summary_prompt(
+            "TestGroup", declaration="decl", additional_prompt="add"
+        )
         assert result.startswith("Custom: TestGroup")
         assert "decl" in result
         assert "add" in result
