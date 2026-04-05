@@ -162,3 +162,4 @@ cython_debug/
 #.idea/
 /download/
 conf/prompt.yaml
+/packages/tg-summary-core/src/download/

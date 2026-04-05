@@ -1,29 +1,32 @@
-# -*- coding: utf-8 -*-
-import os
 import base64
 import mimetypes
-from typing import Union, List, Dict, Any
-from urllib.parse import urlparse, unquote
-from pathlib import Path
-
-from PIL import Image
+import os
+from typing import Any
+from urllib.parse import unquote, urlparse
 
 from openai import OpenAI
-from app.report.text_cat import convert_item_to_json_text
-from app.utils.common import download_file, clean_files
+from PIL import Image
 
-# --- 配置 ---
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-DEFAULT_GPT_MODEL = os.getenv("OPENAI_GPT_MODEL", "gpt-5")  # 需要可用权限；没有就改成 gpt-4o
+from tg_summary_core.config import settings
+from tg_summary_core.report.text_cat import convert_item_to_json_text
+from tg_summary_core.utils.common import clean_files, download_file
 
-client = OpenAI(api_key=OPENAI_API_KEY)
+_client = None
+
+
+def _get_client() -> OpenAI:
+    global _client
+    if _client is None:
+        _client = OpenAI(api_key=settings.openai_api_key)
+    return _client
+
 
 current_directory = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_DOWNLOAD_DIR = os.path.join(current_directory, "..", "..", "download")
 os.makedirs(DEFAULT_DOWNLOAD_DIR, exist_ok=True)
 
 # 收尾清理
-_remove_file_path_list: List[str] = []
+_remove_file_path_list: list[str] = []
 
 
 # ---------- 工具函数 ----------
@@ -42,13 +45,13 @@ def _ensure_valid_image(file_path: str) -> None:
 
 
 # ---------- 你的对外函数 ----------
-def generate_gpt_parts_by_group_messages(group_messages: List[dict]) -> List[dict]:
+def generate_gpt_parts_by_group_messages(group_messages: list[dict]) -> list[dict]:
     """
     把 DynamoDB 聊天记录转换为 Responses API 可识别的多模态 parts 列表。
     - 文本段: {"type":"input_text","text": "..."}
     - 图片段: {"type":"input_image","image_url": "http(s)://... 或 data:..."}
     """
-    gpt_parts: List[dict] = []
+    gpt_parts: list[dict] = []
 
     for message in group_messages:
         # 文本部分（老数据若产出 "type": "text"，这里一并映射为 input_text）
@@ -70,14 +73,14 @@ def generate_gpt_parts_by_group_messages(group_messages: List[dict]) -> List[dic
     return gpt_parts
 
 
-def resolve_message_media(media: dict) -> Union[dict, None]:
+def resolve_message_media(media: dict) -> dict | None:
     """
     下载媒体并转为 Responses API 的 input_image 段。
     支持：
       - {"mediaType": "photo", "presignedUrl": "..."}  # 远端图，先下本地再转 data URL
       - {"mediaType": "image_url", "presignedUrl": "..."}  # 直接用 URL
     """
-    result: Union[dict, None] = None
+    result: dict | None = None
 
     # 统一从 presignedUrl 解析文件名
     urlparser = urlparse(media["presignedUrl"])
@@ -89,25 +92,24 @@ def resolve_message_media(media: dict) -> Union[dict, None]:
         return {"type": "input_image", "image_url": media["presignedUrl"]}
 
     # 需要下载的图片（例如 "photo"）
-    if media.get("mediaType") == "photo":
-        if download_file(media["presignedUrl"], file_path):
-            try:
-                _ensure_valid_image(file_path)
-                data_url = _to_data_url(file_path)
-                result = {"type": "input_image", "image_url": data_url}
-            except Exception as e:
-                print(f"[resolve_message_media] Error processing image {file_path}: {e}")
-            finally:
-                if os.path.exists(file_path):
-                    _remove_file_path_list.append(file_path)
+    if media.get("mediaType") == "photo" and download_file(media["presignedUrl"], file_path):
+        try:
+            _ensure_valid_image(file_path)
+            data_url = _to_data_url(file_path)
+            result = {"type": "input_image", "image_url": data_url}
+        except Exception as e:
+            print(f"[resolve_message_media] Error processing image {file_path}: {e}")
+        finally:
+            if os.path.exists(file_path):
+                _remove_file_path_list.append(file_path)
 
     return result
 
 
 def generate_gpt_response_by_gpt_parts(
-    gpt_parts: List[dict],
+    gpt_parts: list[dict],
     prompt: str,
-    model: str = DEFAULT_GPT_MODEL,
+    model: str = None,
     *,
     temperature: float = 1.0,
     reasoning_effort: str = "medium",  # "minimal" | "medium" | "high"
@@ -119,7 +121,10 @@ def generate_gpt_response_by_gpt_parts(
       - "image_url" -> input_image.image_url
       - "image_base64" -> 包装成 data URL 后放到 image_url
     """
-    content_list: List[Dict[str, Any]] = []
+    if model is None:
+        model = settings.openai_gpt_model
+
+    content_list: list[dict[str, Any]] = []
 
     for part in gpt_parts or []:
         ptype = part.get("type")
@@ -163,7 +168,7 @@ def generate_gpt_response_by_gpt_parts(
     if not content_list:
         content_list.append({"type": "input_text", "text": ""})
 
-    response = client.responses.create(
+    response = _get_client().responses.create(
         model=model,
         input=[{"role": "user", "content": content_list}],
         reasoning={"effort": reasoning_effort},

@@ -1,0 +1,12 @@
+[project]
+name = "tg-group-summary-entrypoint"
+version = "0.1.0"
+description = "Entry point app for Telegram group chat summarization"
+requires-python = ">=3.13"
+dependencies = ["tg-summary-core"]
+
+[tool.uv]
+package = false
+
+[tool.uv.sources]
+tg-summary-core = { workspace = true }

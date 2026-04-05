@@ -1,0 +1,18 @@
+[project]
+name = "tg-summary-core"
+version = "0.1.0"
+description = "Core library for Telegram group chat summarization"
+requires-python = ">=3.13"
+dependencies = [
+    "openai>=1.99.1",
+    "boto3>=1.38.0",
+    "requests>=2.32.3",
+    "Pillow>=10.0",
+    "google-genai>=1.54.0",
+    "pyyaml>=6.0",
+    "pydantic-settings>=2.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

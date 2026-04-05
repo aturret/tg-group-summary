@@ -1,0 +1,18 @@
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 2%
+    patch:
+      default:
+        target: 80%
+
+ignore:
+  - "apps/entrypoint/main.py"
+  - "conf/**"
+
+comment:
+  layout: "diff, flags, components"
+  behavior: default
+  require_changes: true
