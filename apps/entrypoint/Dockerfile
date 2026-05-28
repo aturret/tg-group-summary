@@ -32,9 +32,10 @@ RUN mkdir -p packages/tg-summary-core/src/tg_summary_core && \
 # 6. 安装依赖
 # --frozen: 严格按照 lock 文件安装，不更新版本
 # --no-dev: 不安装开发依赖 (如 pytest 等)
+# --package: 同步 entrypoint app 的 runtime 依赖，包括 workspace 内的 tg-summary-core
 # --mount: 使用缓存挂载，加快重复构建速度
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev
+    uv sync --frozen --no-dev --package tg-group-summary-entrypoint
 
 # 7. 将 uv 创建的虚拟环境加入 PATH
 ENV PATH="/app/.venv/bin:$PATH"
